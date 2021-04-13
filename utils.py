@@ -11,18 +11,22 @@ class ReplayBuffer(object):
 		self.action = np.zeros((max_size, action_dim))
 		self.next_state = np.zeros((max_size, state_dim))
 		self.reward = np.zeros((max_size, 1))
+		self.exp_reward = np.zeros((max_size, 1))
 		self.n_step = np.zeros((max_size, 1))
+		self.exp_n_step = np.zeros((max_size, 1))
 		self.not_done = np.zeros((max_size, 1))
 
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-	def add(self ,state, action, next_state, reward,n_step, done):
+	def add(self,state,action,next_state,reward,ex_rew,n_step,ex_n_step,done):
 		self.state[self.ptr] = state
 		self.action[self.ptr] = action
 		self.next_state[self.ptr] = next_state
 		self.reward[self.ptr] = reward
+		self.exp_reward[self.ptr] = ex_rew
 		self.n_step[self.ptr] = n_step
+		self.exp_n_step[self.ptr] = ex_n_step
 		self.not_done[self.ptr] = 1. - done
 
 		self.ptr = (self.ptr + 1) % self.max_size
@@ -37,7 +41,9 @@ class ReplayBuffer(object):
 			torch.FloatTensor(self.action[ind]).to(self.device),
 			torch.FloatTensor(self.next_state[ind]).to(self.device),
 			torch.FloatTensor(self.reward[ind]).to(self.device),
+			torch.FloatTensor(self.exp_reward[ind]).to(self.device),
 			torch.FloatTensor(self.n_step[ind]).to(self.device),
+			torch.FloatTensor(self.exp_n_step[ind]).to(self.device),
 			torch.FloatTensor(self.not_done[ind]).to(self.device)
 		)
 	

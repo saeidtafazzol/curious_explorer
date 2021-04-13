@@ -70,7 +70,7 @@ class Critics(nn.Module):
 		return self.c1_5(c1)
 
 
-class DDPG(object):
+class DDPG_EXPLORER(object):
 	def __init__(self,state_dim,action_dim,max_action,min_action,discount=0.99,tau=1e-4):
 		
 		self.actors = Actors(state_dim, action_dim).to(device)
@@ -108,10 +108,10 @@ class DDPG(object):
 		state,action, next_state, reward, ex_reward, n_step, ex_n_step, not_done = replay_buffer.sample(batch_size)
 		
 		target_Q = self.critics_target(next_state,self.actors_target(next_state))
-		target_Q = reward + (not_done * self.discount * target_Q).detach()
+		target_Q = ex_reward + (not_done * self.discount * target_Q).detach()
 		current_Q = self.critics(state, action)
 		beta = 0.2
-		mixed_q = beta*n_step + (1-beta)*target_Q
+		mixed_q = beta*ex_n_step + (1-beta)*target_Q
 		critic_loss = F.mse_loss(current_Q, mixed_q)
 
 		self.critics_optimizer.zero_grad()

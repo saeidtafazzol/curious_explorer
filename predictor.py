@@ -13,7 +13,7 @@ class Network(nn.Module):
         self.p2 = nn.Linear(1024,512)
         self.p3 = nn.Linear(512,256)
         self.p4 = nn.Linear(256,128)
-        self.p5 = nn.Linear(128,state_dim)
+        self.p5 = nn.Linear(128,state_dim+1)
         torch.nn.init.normal_(self.p1.weight.data,std=0.01)
         torch.nn.init.normal_(self.p2.weight.data,std=0.01)
         torch.nn.init.normal_(self.p3.weight.data,std=0.01)
@@ -46,9 +46,8 @@ class Predictor(object):
 
     def train(self,replay_buffer, batch_size=64):
 
-        state,action, next_state, reward, n_step, not_done = replay_buffer.sample(batch_size)
-        
-        loss = F.mse_loss(self.net(state,action),next_state)
+        state,action, next_state, reward, ex_reward, n_step, ex_n_step, not_done = replay_buffer.sample(batch_size)
+        loss = F.mse_loss(self.net(state,action),torch.cat((next_state,reward),1))
 
 
         self.net_optimizer.zero_grad()

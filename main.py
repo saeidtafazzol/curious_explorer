@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 import os
-
+import explorer
 import utils
 import DDPG
-import predictor
 import random
 import gym
 import gym_soccer
+# import predictor
 from torch.utils.tensorboard import SummaryWriter
 
 def evaluation(env, policy):
@@ -35,10 +35,13 @@ def suit_action(action):
 
 def add_on_policy_mc(transitions):
 	r = 0
+	exp_r = 0
 	dis = 0.99
 	for i in range(len(transitions)-1,-1,-1):
 		r = transitions[i]["reward"]+dis*r
 		transitions[i]["n_step"] = r
+		exp_r = transitions[i]["exp_reward"]+dis*exp_r
+		transitions[i]["exp_n_step"] = exp_r
 
 if __name__ == "__main__":
 	
@@ -71,7 +74,7 @@ if __name__ == "__main__":
 	action_dim = len(max_a)
 
 	policy = DDPG.DDPG(state_dim, action_dim, max_a, min_a)
-	predictor = predictor.Predictor(state_dim,action_dim)
+	explore = explorer.explorer(state_dim, action_dim, max_a, min_a)
 
 
 	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
@@ -85,18 +88,19 @@ if __name__ == "__main__":
 	high_eval = 0
 	timestep = 0
 	evaluation_num = 0
+	dec = 1
 	while True:
 		eps_rnd = random.random()
-		dec =min(max(0.1,1.0 - float(timestep-start_timesteps)*0.00003),1)
 		if eps_rnd<dec or timestep < start_timesteps:
-			action = (np.array([random.uniform(-1,+1),random.uniform(-1,+1),random.uniform(-1,+1),
-			random.uniform(0,100),random.uniform(-180,+180),
-			random.uniform(-180,+180),random.uniform(0,100),random.uniform(-180,+180)]))
+			action = explore.select_action(state)
 		else:
 			action =policy.select_action(state)
 		next_state, reward, done ,info= env.step(suit_action(action))
-		predicted_state = predictor.predict(state,action)
-		reward = np.linalg.norm(next_state-predicted_state)
+
+		if reward > 0 and dec > 0.1:
+			dec -= 0.01
+
+		predicted_state = explore.predict(state, action)
 
 		done_bool = float(done)
 
@@ -104,6 +108,7 @@ if __name__ == "__main__":
 							"action" : action,
 							"next_state" : next_state,
 							"reward" : reward,
+							"exp_reward" : np.linalg.norm(np.concatenate((next_state,np.array([reward])))-predicted_state),
 							"done" : done_bool
 							})
 
@@ -117,12 +122,13 @@ if __name__ == "__main__":
 			add_on_policy_mc(transitions)
 			for i in transitions:
 				replay_buffer.add(i["state"], i["action"], i["next_state"],
-									i["reward"], i["n_step"], i["done"])
+									i["reward"], i["exp_reward"], i["n_step"],
+									i["exp_n_step"], i["done"])
 			predictor_loss = 0
 			if timestep >= start_timesteps:
 				for i in range(int(episode_timesteps/10)):
 					policy.train(replay_buffer, batch_size)
-					predictor_loss+= predictor.train(replay_buffer,batch_size)
+					predictor_loss+= explore.train(replay_buffer,batch_size)[1]
 
 			writer.add_scalar("reward/episode", episode_reward, episode_num)
 			writer.add_scalar("predictor_loss/episode", predictor_loss, episode_num)
@@ -133,15 +139,15 @@ if __name__ == "__main__":
 			episode_timesteps = 0
 			episode_num += 1 
 
-			# if (episode_num+1) % 500 == 0 :
-			# 	evaluation_num += 1
-			# 	current_eval = evaluation(env, policy)
-			# 	print('evaluation : ', current_eval)
-			# 	writer.add_scalar("current_eval/test_number", current_eval, nt)
-			# 	if current_eval > high_eval:
-			# 		policy.save('./models/model')
-			# 		high_eval = current_eval
-			# 		print('saved in ',episode_num)
-			# 	state, done = env.reset(), False
+			if (episode_num+1) % 500 == 0 :
+				evaluation_num += 1
+				current_eval = evaluation(env, policy)
+				print('evaluation : ', current_eval)
+				writer.add_scalar("current_eval/test_number", current_eval, nt)
+				if current_eval > high_eval:
+					policy.save('./models/model')
+					high_eval = current_eval
+					print('saved in ',episode_num)
+				state, done = env.reset(), False
 		
 	writer.flush()
