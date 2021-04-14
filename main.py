@@ -49,7 +49,7 @@ if __name__ == "__main__":
 	writer = SummaryWriter()
 
 	seed = 0
-	save_model = False
+	save_model = True
 	start_timesteps = 1000
 	batch_size = 256
 
