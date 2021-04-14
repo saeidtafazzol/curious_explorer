@@ -1,4 +1,4 @@
-import DDPG
+import policy_explorer
 import predictor
 import utils
 import random
@@ -6,7 +6,7 @@ import numpy as np
 
 class explorer(object):
 	def __init__(self,state_dim,action_dim,max_action,min_action,discount=0.99,tau=1e-4):
-		self.ddpg = DDPG.DDPG(state_dim, action_dim, max_action, min_action)
+		self.ddpg = policy_explorer.DDPG_EXPLORER(state_dim, action_dim, max_action, min_action)
 		self.predictor = predictor.Predictor(state_dim,action_dim)
         
 		self.counter = 0

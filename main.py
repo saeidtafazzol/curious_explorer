@@ -79,9 +79,10 @@ if __name__ == "__main__":
 
 	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
 
-	env = gym.make('SoccerScoreGoal-v0')
+	env = gym.make('Soccer-v0')
 	state, done = env.reset(), False
 	episode_reward = 0
+	exp_episode_reward = 0
 	episode_timesteps = 0
 	episode_num = 0
 	transitions = []
@@ -96,24 +97,25 @@ if __name__ == "__main__":
 		else:
 			action =policy.select_action(state)
 		next_state, reward, done ,info= env.step(suit_action(action))
-
 		if reward > 0 and dec > 0.1:
-			dec -= 0.01
+			print('decreased it')
+			dec -= 0.001
 
 		predicted_state = explore.predict(state, action)
 
 		done_bool = float(done)
-
+		exp_reward = np.linalg.norm(np.concatenate((next_state,np.array([reward])))-predicted_state)
 		transitions.append({"state" : state,
 							"action" : action,
 							"next_state" : next_state,
 							"reward" : reward,
-							"exp_reward" : np.linalg.norm(np.concatenate((next_state,np.array([reward])))-predicted_state),
+							"exp_reward" : exp_reward,
 							"done" : done_bool
 							})
 
 		state = next_state
 		episode_reward += reward
+		exp_episode_reward +=  exp_reward
 
 		timestep += 1
 		episode_timesteps+=1
@@ -132,9 +134,11 @@ if __name__ == "__main__":
 
 			writer.add_scalar("reward/episode", episode_reward, episode_num)
 			writer.add_scalar("predictor_loss/episode", predictor_loss, episode_num)
+			writer.add_scalar("exp_reward/episode",exp_episode_reward,episode_num)
 
 			state, done = env.reset(), False
 			episode_reward = 0
+			exp_episode_reward =0
 			transitions = []
 			episode_timesteps = 0
 			episode_num += 1 
@@ -143,7 +147,7 @@ if __name__ == "__main__":
 				evaluation_num += 1
 				current_eval = evaluation(env, policy)
 				print('evaluation : ', current_eval)
-				writer.add_scalar("current_eval/test_number", current_eval, nt)
+				writer.add_scalar("current_eval/test_number", current_eval, evaluation_num)
 				if current_eval > high_eval:
 					policy.save('./models/model')
 					high_eval = current_eval
