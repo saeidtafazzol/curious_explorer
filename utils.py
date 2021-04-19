@@ -20,6 +20,22 @@ class ReplayBuffer(object):
 
 
 	def add(self,state,action,next_state,reward,ex_rew,n_step,ex_n_step,done):
+		if self.size == self.max_size:
+			ind = np.random.randint(0, self.size, size=50)
+			n_steps = self.n_step[ind]
+			n_steps = n_steps.flatten()
+			n_steps = np.exp(-n_steps)
+			n_steps = n_steps/np.sum(n_steps)
+			choice = np.random.choice(ind, p=n_steps)
+
+			self.state[self.ptr], self.state[choice] = self.state[choice], self.state[self.ptr]
+			self.next_state[self.ptr], self.next_state[choice] = self.next_state[choice], self.next_state[self.ptr] 
+			self.reward[self.ptr], self.reward[choice] = self.reward[choice], self.reward[self.ptr] 
+			self.exp_reward[self.ptr], self.exp_reward[choice] = self.exp_reward[choice], self.exp_reward[self.ptr] 
+			self.n_step[self.ptr], self.n_step[choice] = self.n_step[choice], self.n_step[self.ptr] 
+			self.exp_n_step[self.ptr], self.exp_n_step[choice] = self.exp_n_step[choice], self.exp_n_step[self.ptr] 
+			self.not_done[self.ptr], self.not_done[choice] = self.not_done[choice], self.not_done[self.ptr] 
+		
 		self.state[self.ptr] = state
 		self.action[self.ptr] = action
 		self.next_state[self.ptr] = next_state
