@@ -77,7 +77,8 @@ if __name__ == "__main__":
 	explore = explorer.explorer(state_dim, action_dim, max_a, min_a)
 
 
-	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+	replay_buffer = utils.ReplayBufferRenew(state_dim, action_dim)
+	replay_buffer_exp = utils.ReplayBufferExplorer(state_dim, action_dim)
 
 	env = gym.make('Soccer-v0')
 	state, done = env.reset(), False
@@ -124,13 +125,14 @@ if __name__ == "__main__":
 			add_on_policy_mc(transitions)
 			for i in transitions:
 				replay_buffer.add(i["state"], i["action"], i["next_state"],
-									i["reward"], i["exp_reward"], i["n_step"],
-									i["exp_n_step"], i["done"])
+									i["reward"], i["n_step"], i["done"])
+				replay_buffer_exp.add(i["state"], i["action"], i["next_state"],
+									i["exp_reward"], i["exp_n_step"], i["reward"] , i["done"])
 			predictor_loss = 0
 			if timestep >= start_timesteps:
 				for i in range(int(episode_timesteps/10)):
 					policy.train(replay_buffer, batch_size)
-					predictor_loss+= explore.train(replay_buffer,batch_size)[1]
+					predictor_loss+= explore.train(replay_buffer_exp,batch_size)[1]
 
 			writer.add_scalar("reward/episode", episode_reward, episode_num)
 			writer.add_scalar("predictor_loss/episode", predictor_loss, episode_num)

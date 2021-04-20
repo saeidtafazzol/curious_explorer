@@ -47,7 +47,7 @@ class Predictor(object):
         return self.net(state,action).cpu().data.numpy().flatten()
 
     def train(self,replay_buffer, batch_size=64):
-        state,action, next_state, reward, ex_reward, n_step, ex_n_step, not_done = replay_buffer.sample(batch_size)
+        state,action, next_state, exp_reward, n_step, reward, not_done = replay_buffer.sample(batch_size)
         loss = F.mse_loss(self.net(state,action), torch.cat((next_state, reward), 1))
 
         self.net_optimizer.zero_grad()

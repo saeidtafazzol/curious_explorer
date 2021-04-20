@@ -41,7 +41,7 @@ class DDPG_EXPLORER(object):
 
 
 	def train(self,replay_buffer, batch_size=64):
-		state,action, next_state, reward, ex_reward, n_step, ex_n_step, not_done = replay_buffer.sample(batch_size)
+		state,action, next_state, ex_reward, ex_n_step, env_reward, not_done = replay_buffer.sample(batch_size)
 		
 		target_Q = self.critic_target(next_state,self.actor_target(next_state))
 		target_Q = ex_reward + (not_done * self.discount * target_Q).detach()
