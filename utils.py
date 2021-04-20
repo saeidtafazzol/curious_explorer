@@ -146,7 +146,7 @@ class ReplayBufferRenew(object):
 
 
 	def add(self,state,action,next_state,reward,n_step,done):
-		if self.size == 50:
+		if self.size == self.max_size:
 			while True:
 				prob = np.exp(-self.n_step[self.ptr])[0]
 				rnd = random()
